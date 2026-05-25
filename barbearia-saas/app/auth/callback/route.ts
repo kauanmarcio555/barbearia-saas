@@ -1,0 +1,23 @@
+// app/auth/callback/route.ts
+// Supabase redireciona para cá após confirmação de e-mail
+// Necessário para o fluxo de signUp com e-mail de verificação
+
+import { createClient } from '@/lib/supabase/server'
+import { NextResponse } from 'next/server'
+
+export async function GET(request: Request) {
+  const { searchParams, origin } = new URL(request.url)
+  const code  = searchParams.get('code')
+  const next  = searchParams.get('next') ?? '/dashboard'
+
+  if (code) {
+    const supabase = createClient()
+    const { error } = await supabase.auth.exchangeCodeForSession(code)
+    if (!error) {
+      return NextResponse.redirect(`${origin}${next}`)
+    }
+  }
+
+  // Algo deu errado — manda pro login com mensagem
+  return NextResponse.redirect(`${origin}/login?error=auth_callback_failed`)
+}
