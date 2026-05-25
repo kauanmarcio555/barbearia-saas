@@ -12,7 +12,7 @@ type Agendamento = { id: number; nome: string; telefone?: string; data: string; 
 type Faturamento = { id: number; data: string; valor: string }
 
 interface Props {
-  barbearia:        Barbearia
+  barbearia:        Barbearia | null // Permitindo null para não dar erro no TypeScript
   agendamentos:     Agendamento[]
   faturamentos:     Faturamento[]
   totalMes:         number
@@ -36,6 +36,23 @@ const STATUS_CLASS: Record<string, string> = {
 export default function DashboardClient({ barbearia, agendamentos, faturamentos, totalMes, agendamentosHoje }: Props) {
   const router    = useRouter()
   const supabase  = createClient()
+
+  // 🚨 TRAVA DE SEGURANÇA: Evita a tela branca se o banco de dados estiver vazio
+  if (!barbearia) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', backgroundColor: '#0a0a0a', color: '#fff', fontFamily: 'sans-serif' }}>
+        <h2 style={{ color: '#e2b857' }}>✦ BarberOS</h2>
+        <p style={{ color: '#888', marginTop: 8 }}>Nenhuma barbearia vinculada a esta conta.</p>
+        <button onClick={() => router.push('/onboarding')} style={{ marginTop: 24, padding: '12px 24px', backgroundColor: '#e2b857', border: 'none', borderRadius: '6px', color: '#000', fontWeight: 'bold', cursor: 'pointer' }}>
+          Configurar minha Barbearia
+        </button>
+        <button onClick={async () => { await supabase.auth.signOut(); router.push('/login'); }} style={{ marginTop: 16, background: 'none', border: 'none', color: '#ff4a4a', cursor: 'pointer' }}>
+          Sair da Conta
+        </button>
+      </div>
+    );
+  }
+
   const [aba, setAba]           = useState<Aba>('agenda')
   const [loading, setLoading]   = useState<number | null>(null)
 
@@ -52,7 +69,7 @@ export default function DashboardClient({ barbearia, agendamentos, faturamentos,
       .from('agendamentos')
       .update({ status })
       .eq('id', id)
-      .eq('barbearia_id', barbearia.id) // redundante, mas explícito
+      .eq('barbearia_id', barbearia.id)
     setLoading(null)
     router.refresh()
   }
